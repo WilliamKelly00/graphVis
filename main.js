@@ -12,50 +12,85 @@ const renderer = new THREE.WebGLRenderer({
 
 window.addEventListener( 'resize', onWindowResize );
 
-
 renderer.setPixelRatio( window.devicePixelRatio );
 renderer.setSize( window.innerWidth, window.innerHeight );
 camera.position.setZ(30);
 
+//Graph setup
+let vertices = [];
+let edges = [];
 
-renderer.render(scene, camera);
+function createVertices(numVertices, spread){
+  for(let i = 0; i < numVertices; i++){
+    vertices.push([THREE.MathUtils.randFloatSpread(spread), THREE.MathUtils.randFloatSpread(spread), THREE.MathUtils.randFloatSpread(spread)]);
+  }
+}
 
-const geometry = new THREE.TorusGeometry(15, 4, 25, 100);
-const material = new THREE.MeshStandardMaterial( { color: 0x0077b6 } );
-const torus = new THREE.Mesh( geometry, material);
+//Creates a fully connected graph
+function createFullyConnectedEdges(){
+  for(let i = 0; i < vertices.length; i++){
+    for(let j = 0; j < vertices.length; j++){
+      if(i != j){
+        edges.push([i, j]);
+      }
+    }
+  }
+}
 
-scene.add(torus);
+function CreatePath(){
+  for(let i = 0; i < vertices.length; i++){
+    if(i == vertices.length - 1){
+      edges.push([i, 0]);
+    }else{
+      edges.push([i, i + 1]);
+    }
+  }
 
-const sphereGeo = new THREE.SphereGeometry(5);
-const sphereMat = new THREE.MeshStandardMaterial( { color: 0xf72585 } );
+}
 
-const sphere = new THREE.Mesh( sphereGeo, sphereMat );
+//Create Vertices
+createVertices(30, 30);
 
-scene.add(sphere);
+//Create edges
+// createFullyConnectedEdges();
+CreatePath();
 
+//Visualization of graph
 
-const squareGeo = new THREE.BoxGeometry(7,7,7);
-const squareMat = new THREE.MeshStandardMaterial( { color: 0xf48c06 } );
+//draw vertices as spheres
+function drawVertices(){
+  for(let i = 0; i < vertices.length; i++){
+    let geometry = new THREE.SphereGeometry(0.5, 8, 8);
+    let material = new THREE.MeshBasicMaterial({color: 0xffffff});
+    let sphere = new THREE.Mesh(geometry, material);
+    sphere.position.set(vertices[i][0], vertices[i][1], vertices[i][2]);
+    scene.add(sphere);
+  } 
+}
 
-const square = new THREE.Mesh( squareGeo, squareMat );
+var points = [];
 
-scene.add(square);
+function drawEdges(){
+  for(let i = 0; i < edges.length; i++){
+    points.push(new THREE.Vector3(vertices[edges[i][0]][0], vertices[edges[i][0]][1], vertices[edges[i][0]][2]));
+    points.push(new THREE.Vector3(vertices[edges[i][1]][0], vertices[edges[i][1]][1], vertices[edges[i][1]][2]));
+  }
+}
 
-square.position.z = 30;
-square.position.setX(-50);
+drawVertices();
+drawEdges();
 
+var geometry = new THREE.BufferGeometry().setFromPoints( points );
+// CREATE THE LINE
+var line = new THREE.Line(
+        geometry,
+        new THREE.LineBasicMaterial({
+            color: 0x0000ff
+        }));
 
-const squareGeo2 = new THREE.BoxGeometry(40,40,40);
-const squareMat2 = new THREE.MeshStandardMaterial( { color: 0x9d0208 } );
+scene.add(line);
 
-const square2 = new THREE.Mesh( squareGeo2, squareMat2 );
-
-scene.add(square2);
-
-square2.position.z = 200;
-square2.position.setX(50);
-square2.position.setY(-20);
-
+scene.background = new THREE.Color(0x333333);
 
 const pointLight = new THREE.PointLight(0xcaf0f8);
 pointLight.position.set(20,20,20);
@@ -65,26 +100,9 @@ const ambientLight = new THREE.AmbientLight(0xffffff);
 scene.add(pointLight, ambientLight);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-/*
-const spaceTexture = new THREE.TextureLoader().load('a.webp');
-scene.background = spaceTexture;
-*/
-
-function addStar(){
-  const geometry = new THREE.OctahedronGeometry(.5,0);
-  const material = new THREE.MeshStandardMaterial({color: 0x48cae4});
-  const star = new THREE.Mesh(geometry, material);
-
-  const[x,y,z] = Array(3).fill().map(() => THREE.MathUtils.randFloatSpread( 500 ));
-  star.position.set(x,y,z);
-  scene.add(star);
-}
-
-Array(400).fill().forEach(addStar);
 
 function moveCamera(){
   const t = document.body.getBoundingClientRect().top;
-  
   camera.position.z = 50 + (t * -0.2);
   camera.position.x = t * -0.0002;
   camera.position.y = t * -0.0002;
@@ -93,22 +111,9 @@ document.body.onscroll = moveCamera
 
 function animate() {
   requestAnimationFrame( animate );
-
-  torus.rotation.x += 0.003;
-  torus.rotation.y += 0.005;
-  torus.rotation.z += 0.01;
-
-  sphere.rotation.y += 0.01;
-
-  square.rotation.z += 0.004;
-  square.rotation.x += 0.004;
-
-  square2.rotation.z += 0.001;
-
-
-
+  // shapes.forEach(shape => gravity(shape));
+  line.geometry.verticesNeedUpdate = true;
   controls.update();
-
   renderer.render( scene, camera);
 }
 
